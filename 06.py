@@ -1,4 +1,5 @@
 from functools import reduce
+import runner
 
 
 def part1(data):
@@ -18,3 +19,6 @@ def part2(data):
   for group in groups.split(','):
     yes_answers.append(reduce(lambda x, y: set(x).intersection(set(y)), group.splitlines()))
   return sum(map(len, yes_answers))
+
+
+runner.run(day=6)
