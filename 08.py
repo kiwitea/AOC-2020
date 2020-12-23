@@ -36,46 +36,58 @@ class TheEnd(Exception):
         self.acc = acc
         
 
-def run(commands: dict, current_idx: int, exit_idx: int) -> int:
+def run(commands: dict, current_idx: int, exit_idx: int, primary: bool = True) -> int:
     emergency_brake = 1000
     acc = 0
     
     while emergency_brake > 0:
         try:
             cmd = commands.pop(current_idx)
+            parameter = int(cmd.split(' ')[1])
         except KeyError:
             raise KeyError(f'You hit an infinite loop.')
         
         if cmd.startswith('acc'):
-            acc += int(cmd.split(' ')[1])
+            acc += parameter
             current_idx += 1
         elif cmd.startswith('jmp'):
             
-            if (current_idx + 1) == exit_idx:
-                print(f'Changing L{current_idx} "{cmd}" to noop ends the loop.')
-                raise TheEnd(acc=acc)
+            if primary:
+                # allowed to change 1 command
             
-            # add run path: if this was a noop
-            try:
-                acc += run(commands.copy(), current_idx + 1, exit_idx)
-            except KeyError:
-                # nope, still an infinite loop
-                print('nice try')
+                if (current_idx + 1) == exit_idx:
+                    print(f'Changing L{current_idx} "{cmd}" to noop ends the loop.')
+                    raise TheEnd(acc=acc)
+                
+                # add run path: if this was a noop
+                try:
+                    print(f'Create run path from L{current_idx}')
+                    acc += run(commands.copy(), current_idx + 1, exit_idx, primary=False)
+                    print(f'Run path completed from L{current_idx}: ACC = {acc}')
+                except KeyError:
+                    # nope, still an infinite loop
+                    print('nice try')
+                    pass
+                except TheEnd as end:
+                    # Run path hit the end of instruction. This is good.
+                    print(f'Hit the end in run path L{current_idx}: ACC = {acc} + {end.acc} => {acc+end.acc}')
+                    raise TheEnd(acc=acc + end.acc)
+                
+            else:
+                # not allowed to change another cmd
                 pass
-            except TheEnd as end:
-                raise TheEnd(acc=acc + end.acc)
             
-            current_idx += int(cmd.split(' ')[1])
+            current_idx += parameter  # JMP +/- X
         else:
             # check if we could exit if this was a jmp
-            if current_idx + int(cmd.split(' ')[1]) == exit_idx:
-                print(f'Found it. Changed L{current_idx} "{cmd}" to "jmp {cmd.split(" ")[1]}".')
+            if primary and (current_idx + parameter) == exit_idx:
+                print(f'Found it. Changed L{current_idx} "{cmd}" to "jmp {parameter}".')
                 return acc
             current_idx += 1
             
         if current_idx == exit_idx:
             print('Reached the end')
-            return acc
+            raise TheEnd(acc=acc)
             
         emergency_brake -= 1
         
